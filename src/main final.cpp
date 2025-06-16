@@ -280,6 +280,10 @@ class MyServerCallbacks : public BLEServerCallbacks
         if (pPairedDevice == nullptr || !pPairedDevice->equals(remoteAddress))
         {
             SerialUSB.println("未配对设备，正在发起配对...");
+            oled.clear();                                           // 清除屏幕
+            oled.setFont(ArialMT_Plain_24);                       // 设置字体
+            oled.drawString(0, 32, "PIN:" + String(dynamicPasskey)); // 显示配对码
+            oled.display();
 
             // 主动发起配对请求
             esp_ble_set_encryption(param->connect.remote_bda, ESP_BLE_SEC_ENCRYPT_MITM);
@@ -322,18 +326,7 @@ class MyCallbacks : public BLECharacteristicCallbacks
         BLECharacteristic *pSpeedChar = pServer->getServiceByUUID(SERVICE_UUID)->getCharacteristic(SPEED_CHAR_UUID);
         BLECharacteristic *pDirectChar = pServer->getServiceByUUID(SERVICE_UUID)->getCharacteristic(DIRECTION_CHAR_UUID);
 
-        // if (uuid.equals(BLEUUID(MODE_CHAR_UUID)))
-        // {
-        //     mode = atoi(pCharacteristic->getValue().c_str());
-        //     if (mode == 0){
-        //         opennn = !opennn; // 切换设备状态
-        //         SerialUSB.print("设备状态切换为: ");
-        //         SerialUSB.println(opennn ? "开启" : "关闭");
-        //     }
-        // }
-        // 如果设备已开启，根据各个UUID处理其他特征值
-        // else if (opennn)
-        // {
+        //获取接收到的信息
         if (uuid.equals(BLEUUID(TEMP_CHAR_UUID)))
         {
             temperature = *(pCharacteristic->getValue().c_str());
@@ -399,10 +392,8 @@ void setup()
     oled.flipScreenVertically();                            // 设置屏幕翻转
     oled.setContrast(255);                                  // 设置屏幕亮度
     drawRect();                                             // 测试屏幕显示
-    oled.clear();                                           // 清除屏幕
-    oled.setFont(ArialMT_Plain_24);                       // 设置字体
-    oled.drawString(0, 32, "PIN:" + String(dynamicPasskey)); // 显示配对码
-    oled.display();
+    oled.clear();                                            // 清除屏幕
+    oled.display();                                           // 显示内容
 
     // 创建一个 BLE 设备
     // 设置配对码和安全参数
@@ -473,8 +464,6 @@ void setup()
 
 void loop()
 {
-    //  static uint8_t oldMode = 10, oldtemperature = 10, oldspeed = 10, olddirect = 10;
-    //  static bool oldopennn = true;
     displayMode(mode);        // 更新当前模式
     displayspeed(speed);      // 更新当前风速
     displaydirection(direct); // 更新当前风向
@@ -483,7 +472,7 @@ void loop()
     {
         if (mode != 0)
         {
-            // 只在参数变化或opennn由false变为true时刷新OLED
+            // 只在参数变化时刷新OLED
             if ((oldMode != current_mode) || (oldtemperature != temperature) || (oldspeed != current_speed) || (olddirect != current_direct))
             {
                 oled.clear();
@@ -502,13 +491,9 @@ void loop()
         }
         else
         {
-            // opennn 由 true 变为 false 时清屏
-            //  if (oldopennn) {
             oled.clear();
             oled.display();
-            //  }
         }
-        //  oldopennn = opennn;
     }
 
     // disconnecting  断开连接
