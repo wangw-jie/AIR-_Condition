@@ -263,6 +263,12 @@ class MySecurityCallbacks : public BLESecurityCallbacks
             {
                 pServer->disconnect(0);
             }
+            dynamicPasskey = 100000 + (esp_random() % 900000); // 重新生成配对码
+            // 更新蓝牙安全设置中的配对码
+            BLESecurity *pSecurity = new BLESecurity();
+            pSecurity->setStaticPIN(dynamicPasskey);
+            oled.clear();                                           // 清除屏幕
+            oled.display();
         }
     }
 };
@@ -452,7 +458,7 @@ void setup()
     speedChar->setCallbacks(&charCallback);
     directionChar->setCallbacks(&charCallback);
 
-    modeChar->setValue(&mode,1); // 设置初始模式值
+    modeChar->setValue(&mode,1);  
     tempChar->setValue(&temperature,1);
     speedChar->setValue(&speed,1);
     directionChar->setValue(&direct, 1);
@@ -489,7 +495,7 @@ void loop()
                 olddirect = current_direct;
             }
         }
-        else
+        else    // 如果模式为0，清除OLED显示，关机
         {
             oled.clear();
             oled.display();
