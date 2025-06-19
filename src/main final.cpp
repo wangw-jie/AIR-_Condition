@@ -52,9 +52,7 @@ String oldMode = String(0), oldspeed = String(0), olddirect = String(0); // 保�
 BLEServer *pServer = NULL;                                               // BLEServer指针 pServer
 BLECharacteristic *pTxCharacteristic = NULL;                             // BLECharacteristic指针 pTxCharacteristic
 bool deviceConnected = false;                                            // 本次连接状态
-bool oldDeviceConnected = false;                                         // 上次连接状态
-bool opennn = false;                                                     // 设备开关状态
-bool oldopennn = false;                                                  // 上次设备开关状态
+bool oldDeviceConnected = false;                                         // 上次连接状态                                                                                        // 上次设备开关状态
 uint32_t dynamicPasskey = 0;                                             // 动态配对码
 bool ble_link_encrypted = false;                                         // 是否加密连接
 BLEAddress *pPairedDevice = nullptr;                                     // 已配对设备地址指针
@@ -97,6 +95,7 @@ void loadParams()
 void savePairedDeviceInfo(BLEAddress address)
 {
     prefs.begin("bledevice", false);
+    prefs.clear(); // 清除之前的配对设备信息
     prefs.putString("address", address.toString().c_str());
     prefs.end();
 }
@@ -237,6 +236,9 @@ class MySecurityCallbacks : public BLESecurityCallbacks
         {
             SerialUSB.println("配对成功");
             ble_link_encrypted = true;
+            oled.clear();                                           // 清除屏幕
+            oled.display();
+
 
             // 保存配对设备地址
             BLEAddress remoteAddress(cmpl.bd_addr);
@@ -264,6 +266,7 @@ class MySecurityCallbacks : public BLESecurityCallbacks
                 pServer->disconnect(0);
             }
             dynamicPasskey = 100000 + (esp_random() % 900000); // 重新生成配对码
+            // dynamicPasskey = 123456; // 重新设置配对码为123456
             // 更新蓝牙安全设置中的配对码
             BLESecurity *pSecurity = new BLESecurity();
             pSecurity->setStaticPIN(dynamicPasskey);
@@ -281,8 +284,9 @@ class MyServerCallbacks : public BLEServerCallbacks
         BLEAddress remoteAddress(param->connect.remote_bda);
         SerialUSB.print("设备尝试连接，地址: ");
         SerialUSB.println(remoteAddress.toString().c_str());
+        deviceConnected = true; // 设置连接状态为连接
 
-        // 如果不是已配对设备，主动发起配对
+        // // 如果不是已配对设备，主动发起配对
         if (pPairedDevice == nullptr || !pPairedDevice->equals(remoteAddress))
         {
             SerialUSB.println("未配对设备，正在发起配对...");
@@ -300,6 +304,8 @@ class MyServerCallbacks : public BLEServerCallbacks
         else
         {
             SerialUSB.println("已配对设备，允许连接");
+            oled.clear();                                           // 清除屏幕
+            oled.display();
             ble_link_encrypted = true;
             deviceConnected = true;
         }
@@ -385,7 +391,6 @@ void setup()
     loadParams();           // 启动时加载参数
     loadPairedDeviceInfo(); // 加载配对设备信息
     SerialUSB.begin(9600);
-    opennn = false; // 默认设备状态为关闭
 
     // 根据设备编号生成设备名称
     String deviceName = "AIR-" + String(DEVICE_NUMBER);
@@ -393,6 +398,7 @@ void setup()
 
     // 生成动态6位配对码
     dynamicPasskey = 100000 + (esp_random() % 900000); // 生成100到999之间的随机数
+    // dynamicPasskey = 123456;
 
     oled.init();
     oled.flipScreenVertically();                            // 设置屏幕翻转
@@ -466,6 +472,7 @@ void setup()
     pService->start();                  // 开始服务
     pServer->getAdvertising()->start(); // 开始广播
     SerialUSB.println(" 等待一个客户端连接，且发送通知... ");
+    mode = 0; // 初始化模式为0,则为关机状态
 }
 
 void loop()
